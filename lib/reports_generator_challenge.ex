@@ -21,16 +21,42 @@ defmodule ReportsGeneratorChallenge do
   end
 
   defp report_acc do
-    names = Enum.into(@available_names, %{}, fn x -> {x, 0} end)
+    all_hours = Enum.into(@available_names, %{}, fn x -> {x, 0} end)
+    hours_per_month = %{}
+    hours_per_year = %{}
 
-    build_report(names)
+    build_report(all_hours, hours_per_month, hours_per_year)
   end
 
-  defp sum_values([name, hour, _day, _month, _year], %{"all_hours" => names}) do
-    names = Map.put(names, name, names[name] + hour)
+  defp sum_values([name, hour, _day, month, year], %{
+         "all_hours" => all_hours,
+         "hours_per_month" => hours_per_month,
+         "hours_per_year" => hours_per_year
+       }) do
+    all_hours = merge_maps(all_hours, %{name => hour})
 
-    build_report(names)
+    hours_per_month = merge_sub(hours_per_month, %{name => %{month => hour}})
+
+    hours_per_year = merge_sub(hours_per_year, %{name => %{year => hour}})
+
+    build_report(all_hours, hours_per_month, hours_per_year)
   end
 
-  defp build_report(names), do: %{"all_hours" => names}
+  defp merge_maps(map1, map2) do
+    Map.merge(map1, map2, fn _key, value1, value2 -> value1 + value2 end)
+  end
+
+  defp merge_sub(map1, map2) do
+    Map.merge(map1, map2, fn _k, v1, v2 ->
+      merge_maps(v1, v2)
+    end)
+  end
+
+  defp build_report(all_hours, hours_per_month, hours_per_year) do
+    %{
+      "all_hours" => all_hours,
+      "hours_per_month" => hours_per_month,
+      "hours_per_year" => hours_per_year
+    }
+  end
 end
